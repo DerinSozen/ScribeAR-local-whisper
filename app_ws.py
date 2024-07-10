@@ -3,9 +3,8 @@ import websockets
 import speech_recognition as sr
 import threading
 import numpy as np
-import speech_recognition as sr
 import whisper
-import re
+
 import json
 
 from datetime import datetime, timedelta

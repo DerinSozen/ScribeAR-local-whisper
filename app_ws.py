@@ -78,15 +78,6 @@ async def handler(websocket, path):
                 result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
                 text = result['text'].strip()
 
-                if '!!!!!' in text:
-                    continue
-                if 'a little bit of a little bit of'in text:
-                    continue
-                if 'I\'m sorry.I\'m sorry.I\'m sorry.' in text:
-                    continue
-                if 'Okay. Okay. Okay' in text:
-                    continue
-
                 websocket.send(json.dumps(text)) 
 
         except KeyboardInterrupt:

@@ -43,7 +43,7 @@ async def handler(websocket):
     # Create a background thread that will pass us raw audio bytes.
     async def listen_in_background():
         while True:
-            with sr.microphone(sample_rate=16000) as source:
+            with sr.Microphone(sample_rate=16000) as source:
                 audio = recorder.listen(source, phrase_time_limit=record_timeout)
                 await record_callback(audio)
 

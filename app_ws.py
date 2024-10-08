@@ -34,8 +34,8 @@ async def handler(websocket, path):
 
     transcription = ['']
     
-    with source:
-        recorder.adjust_for_ambient_noise(source)
+    # with source:
+    #     recorder.adjust_for_ambient_noise(source)
 
     def record_callback(_, audio:sr.AudioData) -> None:
         """
@@ -78,13 +78,15 @@ async def handler(websocket, path):
                 result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
                 text = result['text'].strip()
 
+                print()
+                print(text)
                 websocket.send(json.dumps(text)) 
 
         except KeyboardInterrupt:
             break
 
 
-start_server = websockets.serve(handler, "localhost", 8000)
+start_server = websockets.serve(handler, "localhost", 8002)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

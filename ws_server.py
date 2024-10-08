@@ -6,6 +6,11 @@ import asyncio
 import websockets
 from datetime import datetime
 
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+def py_error_handler(filename, line, function, err, fmt):
+    print "Alsa Error message"
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
 async def handler(websocket):
     # The last time a recording was retrieved from the queue.
     phrase_time = None

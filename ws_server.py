@@ -20,8 +20,6 @@ async def handler(websocket):
     recorder = sr.Recognizer()
     recorder.energy_threshold = 1000
     recorder.dynamic_energy_threshold = False
-    
-    source = sr.Microphone(sample_rate=16000)
 
     # load model
     audio_model = whisper.load_model("base.en")
@@ -31,9 +29,6 @@ async def handler(websocket):
 
     transcription = ['']
 
-    with source:
-        recorder.adjust_for_ambient_noise(source)
-
     async def record_callback(audio: sr.AudioData) -> None:
         # Grab the raw bytes and push it into the thread safe queue.
         data = audio.get_raw_data()
@@ -42,8 +37,9 @@ async def handler(websocket):
     # Create a background thread that will pass us raw audio bytes.
     async def listen_in_background():
         while True:
-            audio = recorder.listen(source, phrase_time_limit=record_timeout)
-            await record_callback(audio)
+            with sr.microphone(sample_rate=16000) as source:
+                audio = recorder.listen(source, phrase_time_limit=record_timeout)
+                await record_callback(audio)
 
     listen_task = asyncio.create_task(listen_in_background())
     print("Starting recording...")

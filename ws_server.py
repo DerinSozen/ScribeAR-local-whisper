@@ -5,8 +5,8 @@ import re
 import asyncio
 import websockets
 from ctypes import *
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import pyaudio
 
 # From alsa-lib Git 3fd4ab9be0db7c7430ebd258f2717a976381715d
 # $ grep -rn snd_lib_error_handler_t
@@ -16,6 +16,10 @@ ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
 def py_error_handler(filename, line, function, err, fmt):
     print("Alsa Error message")
 c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+# Set the error handler
+asound = cdll.LoadLibrary('libasound.so.2')
+asound.snd_lib_error_set_handler(c_error_handler)
 
 async def handler(websocket):
     # The last time a recording was retrieved from the queue.
@@ -47,35 +51,40 @@ async def handler(websocket):
                 audio = recorder.listen(source, phrase_time_limit=record_timeout)
                 await record_callback(audio)
 
+    # Start the recording task
     listen_task = asyncio.create_task(listen_in_background())
+    await asyncio.sleep(0)  # Allow the event loop to start the recording task
+
     print("Starting recording...")
     while True:
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
-            if not data_queue.empty():
-                phrase_complete = False
-                # If enough time has passed between recordings, consider the phrase complete.
-                # Clear the current working audio buffer to start over with the new data.
-                if phrase_time and now - phrase_time > timedelta(seconds=phrase_timeout):
-                    phrase_complete = True
-                # This is the last time we received new audio data from the queue.
-                phrase_time = now
+            if data_queue.empty():  
+                await asyncio.sleep(0.1)
+                continue  # If queue is empty, skip to next iteration
 
-                # Combine audio data from queue
-                audio_data = b''.join([await data_queue.get() for _ in range(data_queue.qsize())])
+            phrase_complete = False
+            # If enough time has passed between recordings, consider the phrase complete.
+            # Clear the current working audio buffer to start over with the new data.
+            if phrase_time and now - phrase_time > timedelta(seconds=phrase_timeout):
+                phrase_complete = True
+            # This is the last time we received new audio data from the queue.
+            phrase_time = now
 
-                # Convert in-ram buffer to something the model can use directly without needing a temp file.
-                # Convert data from 16 bit wide integers to floating point with a width of 32 bits.
-                # Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
-                audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+            # Combine audio data from queue
+            audio_data = b''.join([await data_queue.get() for _ in range(await data_queue.qsize())]) 
+            # Convert in-ram buffer to something the model can use directly without needing a temp file.
+            # Convert data from 16 bit wide integers to floating point with a width of 32 bits.
+            # Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
+            audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
 
-                # Read the transcription.
-                print("Transcribing...")
-                result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
-                text = result['text'].strip()
+            # Read the transcription.
+            print("Transcribing...")
+            result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
+            text = result['text'].strip()
 
-                await websocket.send(text)
+            await websocket.send(text)
 
         except KeyboardInterrupt:
             break

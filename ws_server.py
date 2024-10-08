@@ -74,7 +74,7 @@ async def handler(websocket):
         except Exception as e:
             print(f"Error: {e}")
 
-start_server = websockets.serve(handler, "localhost", 8003)
+start_server = websockets.serve(handler, "localhost", 1234)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

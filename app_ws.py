@@ -77,16 +77,15 @@ async def handler(websocket, path):
                 # Read the transcription.
                 result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
                 text = result['text'].strip()
-
-                print()
+                # text = "Ftesting websocket"
                 print(text)
-                websocket.send(json.dumps(text)) 
+                await websocket.send('F'+text) 
 
         except KeyboardInterrupt:
             break
 
 
-start_server = websockets.serve(handler, "localhost", 8002)
+start_server = websockets.serve(handler, "localhost", 8000)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

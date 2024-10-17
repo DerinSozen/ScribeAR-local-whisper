@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import speech_recognition as sr
 import whisper
@@ -18,8 +19,8 @@ def py_error_handler(filename, line, function, err, fmt):
 c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
 
 # Set the error handler
-asound = cdll.LoadLibrary('libasound.so.2')
-asound.snd_lib_error_set_handler(c_error_handler)
+# asound = cdll.LoadLibrary('libasound.so.2')
+# asound.snd_lib_error_set_handler(c_error_handler)
 
 async def handler(websocket):
     # The last time a recording was retrieved from the queue.

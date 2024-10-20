@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 from queue import Queue
 
-r = sr.Recognizer()
+# r = sr.Recognizer()
 
 async def handler(websocket, path):
     
@@ -20,17 +20,22 @@ async def handler(websocket, path):
     data_queue = Queue()
     # We use SpeechRecognizer to record our audio because it has a nice feature where it can detect when speech ends.
     recorder = sr.Recognizer()
-    recorder.energy_threshold = 1000
+    # use the default microphone as the audio source
+    source = sr.Microphone(sample_rate=20000)
+    # recorder.adjust_for_ambient_noise(source,  1)
+    with sr.Microphone(sample_rate=20000) as source:                
+        recorder.adjust_for_ambient_noise(source, 0.5)
+    
+    # recorder.adjust_for_ambient_noise(source)
+    # recorder.energy_threshold = 150
     # Definitely do this, dynamic energy compensation lowers the energy threshold dramatically to a point where the SpeechRecognizer never stops recording.
     recorder.dynamic_energy_threshold = False
-
-    source = sr.Microphone(sample_rate=16000)
 
     # load model
     audio_model = whisper.load_model("base.en") 
     
     record_timeout = 2
-    phrase_timeout = 3
+    phrase_timeout = 2.5
 
     transcription = ['']
     
@@ -54,7 +59,7 @@ async def handler(websocket, path):
     
     while True:
         try:
-            now = datetime.utcnow()
+            now = datetime.now()
             # Pull raw recorded audio from the queue.
             if not data_queue.empty():
                 phrase_complete = False
@@ -74,12 +79,23 @@ async def handler(websocket, path):
                 # Clamp the audio stream frequency to a PCM wavelength compatible default of 32768hz max.
                 audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
 
+                # Time when transcription started
+                start_time = datetime.now()
                 # Read the transcription.
                 result = audio_model.transcribe(audio_np, fp16=False, temperature=0.0)
                 text = result['text'].strip()
+                #Calculate the latency
+                latency = datetime.now() - start_time
                 # text = "Ftesting websocket"
-                print(text)
                 await websocket.send('F'+text) 
+
+                #DEBUGGING INFO
+                print("-----------------------DEBUGGING------------------------")
+                print("Transcribed Text:" + text)
+                print(f"Latency: {latency.total_seconds()} seconds")
+                print(recorder.energy_threshold)
+                print("-----------------------DEBUGGING------------------------")
+                #DEBUGGING INFO
 
         except KeyboardInterrupt:
             break

@@ -22,7 +22,6 @@ model = AutoModelForSpeechSeq2Seq.from_pretrained(
 # Enable static cache and compile the forward pass
 model.generation_config.cache_implementation = "static"
 model.generation_config.max_new_tokens = 256
-model.forward = torch.compile(model.forward, mode="reduce-overhead", fullgraph=True)
 
 processor = AutoProcessor.from_pretrained(model_id)
 

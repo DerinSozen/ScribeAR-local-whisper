@@ -101,7 +101,7 @@ async def handler(websocket, path):
                 # Time when transcription started
                 start_time = datetime.now()
                 # Read the transcription.
-                result = audio_model.transcribe(filtered_audio_np, fp16=False, temperature=0.0)
+                result = audio_model.transcribe(filtered_audio_np, fp16=True, temperature=0.0)
                 text = result['text'].strip()
                 if phrase_complete:
                     transcription.append(text)

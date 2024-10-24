@@ -19,10 +19,6 @@ model = AutoModelForSpeechSeq2Seq.from_pretrained(
     model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
 ).to(device)
 
-# Enable static cache and compile the forward pass
-model.generation_config.cache_implementation = "static"
-model.generation_config.max_new_tokens = 256
-
 processor = AutoProcessor.from_pretrained(model_id)
 
 # Setup pipeline for ASR

@@ -32,22 +32,40 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
 # Load and compile Whisper model
-model_id = "openai/whisper-small"
-model = AutoModelForSpeechSeq2Seq.from_pretrained(
-    model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
+final_model_id = "openai/whisper-small"
+final_model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    final_model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
 ).to(device)
 
-processor = AutoProcessor.from_pretrained(model_id)
+final_processor = AutoProcessor.from_pretrained(final_model_id)
 
 # Setup pipeline for ASR
-pipe = pipeline(
+final_pipe = pipeline(
     "automatic-speech-recognition",
-    model=model,
-    tokenizer=processor.tokenizer,
-    feature_extractor=processor.feature_extractor,
+    model=final_model,
+    tokenizer=final_processor.tokenizer,
+    feature_extractor=final_processor.feature_extractor,
     torch_dtype=torch_dtype,
     device=device,
 )
+
+# Load and compile Whisper model
+initial_model_id = "openai/whisper-tiny"
+initial_model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    initial_model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
+).to(device)
+
+initial_processor = AutoProcessor.from_pretrained(initial_model_id)
+
+initial_pipe = pipeline(
+    "automatic-speech-recognition",
+    model=initial_model,
+    tokenizer=initial_processor.tokenizer,
+    feature_extractor=initial_processor.feature_extractor,
+    torch_dtype=torch_dtype,
+    device=device,
+)
+
 
 print("Model loaded.")
 # Bandpass filter functions
@@ -132,7 +150,7 @@ async def handler(websocket, path):
                 # Time when transcription started
                 start_time = datetime.now()
                 # Read the transcription.
-                result = pipe(filtered_audio_np)
+                result = initial_pipe(filtered_audio_np)
                 text = result['text'].strip()
                 if phrase_complete:
                     transcription.append(text)
@@ -140,8 +158,14 @@ async def handler(websocket, path):
                     transcription[-1] = text
                 #Calculate the latency
                 latency = datetime.now() - start_time
-                # text = "Ftesting websocket"
                 await websocket.send('F'+transcription[-1]) 
+                
+                result = final_pipe(filtered_audio_np)
+                text = result['text'].strip()
+                if phrase_complete:
+                    transcription.append(text)
+                else:
+                    transcription[-1] = text
 
                 #DEBUGGING INFO
                 print("-----------------------DEBUGGING------------------------")

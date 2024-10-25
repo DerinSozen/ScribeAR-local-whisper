@@ -158,7 +158,7 @@ async def handler(websocket, path):
                     transcription[-1] = text
                 #Calculate the latency
                 latency = datetime.now() - start_time
-                await websocket.send('F'+transcription[-1]) 
+                await websocket.send('I'+transcription[-1]) 
                 
                 result = final_pipe(filtered_audio_np)
                 text = result['text'].strip()
@@ -166,6 +166,8 @@ async def handler(websocket, path):
                     transcription.append(text)
                 else:
                     transcription[-1] = text
+                    
+                await websocket.send('F'+transcription[-1]) 
 
                 #DEBUGGING INFO
                 print("-----------------------DEBUGGING------------------------")

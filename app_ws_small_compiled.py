@@ -8,6 +8,24 @@ import numpy as np
 from scipy.signal import butter, lfilter
 import speech_recognition as sr
 from datetime import datetime, timedelta
+from contextlib import contextmanager
+from ctypes import CFUNCTYPE, c_char_p, c_int, cdll
+import pyaudio
+
+#Set error handler to ignore irrelevant ALSA errors
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+@contextmanager
+def noalsaerr():
+    asound = cdll.LoadLibrary('libasound.so')
+    asound.snd_lib_error_set_handler(c_error_handler)
+    yield
+    asound.snd_lib_error_set_handler(None)
 
 # Set device and precision
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -31,6 +49,7 @@ pipe = pipeline(
     device=device,
 )
 
+print("Model loaded.")
 # Bandpass filter functions
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
@@ -87,8 +106,6 @@ async def handler(websocket, path):
     # Create a background thread that will pass us raw audio bytes.
     # We could do this manually but SpeechRecognizer provides a nice helper.
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
-
-    print("Model loaded.")
     
     while True:
         try:
@@ -139,8 +156,8 @@ async def handler(websocket, path):
 
         except KeyboardInterrupt:
             break
+with noalsaerr():
+    start_server = websockets.serve(handler, "localhost", 8000)
 
-start_server = websockets.serve(handler, "localhost", 8000)
-
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()

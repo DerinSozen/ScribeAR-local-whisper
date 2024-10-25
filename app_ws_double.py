@@ -15,7 +15,7 @@ device = "cuda:0" if torch.cuda.is_available() else "cpu"
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
 # Load and compile Whisper model
-final_model_id = "openai/whisper-small"
+final_model_id = "openai/whisper-small.en"
 final_model = AutoModelForSpeechSeq2Seq.from_pretrained(
     final_model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
 ).to(device)
@@ -33,7 +33,7 @@ final_pipe = pipeline(
 )
 
 # Load and compile Whisper model
-initial_model_id = "openai/whisper-tiny"
+initial_model_id = "openai/whisper-tiny.en"
 initial_model = AutoModelForSpeechSeq2Seq.from_pretrained(
     initial_model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
 ).to(device)
@@ -140,7 +140,7 @@ async def handler(websocket, path):
                 else:
                     transcription[-1] = text
                 #Calculate the latency
-                latency = datetime.now() - start_time
+                first_latency = datetime.now() - start_time
                 await websocket.send('I'+transcription[-1]) 
                 
                 result = final_pipe(filtered_audio_np)
@@ -149,14 +149,16 @@ async def handler(websocket, path):
                     transcription.append(text)
                 else:
                     transcription[-1] = text
-                    
+                
+                final_latency = datetime.now() - start_time
                 await websocket.send('F'+transcription[-1]) 
 
                 #DEBUGGING INFO
                 print("-----------------------DEBUGGING------------------------")
                 print(len(transcription))
                 print("Transcribed Text:" + text)
-                print(f"Latency: {latency.total_seconds()} seconds")
+                print(f"First Guess Latency: {first_latency.total_seconds()} seconds")
+                print(f"Final Guess Latency: {final_latency.total_seconds()} seconds")
                 print(recorder.energy_threshold)
                 print("-----------------------DEBUGGING------------------------")
                 #DEBUGGING INFO

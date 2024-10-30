@@ -114,6 +114,7 @@ async def handler(websocket, path):
 
                 #DEBUGGING INFO
                 print("-----------------------DEBUGGING------------------------")
+                print(result)
                 print(len(transcription))
                 print("Transcribed Text:" + text)
                 print(f"Latency: {latency.total_seconds()} seconds")
